@@ -128,16 +128,16 @@ def read_lines_dams(main_directory, year):
     nabd_dams = nabd_dams.drop_duplicates(subset='NIDID', keep="first")
     #print('Length of raw NABD', len(nabd_dams))
 
-    dams_to_add = gp.read_file(main_directory+'dam_data/dams_to_add.shp')
-    dams_to_add = dams_to_add[['NIDID','Norm_stor', 'Max_stor', 'Year_compl', 
-                                'Purposes', 'join_COMID', 'geometry']].rename(columns={'join_COMID':'COMID'}) 
-    nabd_dams = dams_to_add.append(nabd_dams)
+    # dams_to_add = gp.read_file(main_directory+'dam_data/dams_to_add.shp')
+    # dams_to_add = dams_to_add[['NIDID','Norm_stor', 'Max_stor', 'Year_compl', 
+    #                             'Purposes', 'join_COMID', 'geometry']].rename(columns={'join_COMID':'COMID'}) 
+    # nabd_dams = dams_to_add.append(nabd_dams)
     #print('Length of new NABD', len(nabd_dams))
 
-    wrong_id = pd.read_csv(main_directory+'dam_data/large_dams_wrongID.csv', index_col = 0)
-    wrong_id = wrong_id[wrong_id['NABD_NIDID'].notna()]
-    wrong_id = wrong_id['NIDID']
-    nabd_dams.update(wrong_id)
+    # wrong_id = pd.read_csv(main_directory+'dam_data/large_dams_wrongID.csv', index_col = 0)
+    # wrong_id = wrong_id[wrong_id['NABD_NIDID'].notna()]
+    # wrong_id = wrong_id['NIDID']
+    # nabd_dams.update(wrong_id)
 
     nabd_dams['COMID'] = pd.to_numeric(nabd_dams['COMID'])
     nabd_dams["DamID"] = range(len(nabd_dams.COMID))  
@@ -174,7 +174,7 @@ def read_lines_dams(main_directory, year):
    
     t1 = time()
 
-    flowlines = pd.read_csv(main_directory+"nhd/NHDFlowlines.csv",
+    flowlines = pd.read_csv(main_directory+"nhd/NHDFlowline_Network.csv",
                                 usecols=['Hydroseq', 'UpHydroseq', 'DnHydroseq',
                                         'REACHCODE','LENGTHKM', 'StartFlag', 
                                         'FTYPE','COMID', 'WKT', 'QC_MA',

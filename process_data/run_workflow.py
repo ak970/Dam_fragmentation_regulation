@@ -10,14 +10,14 @@ from shapely import wkt
 from pathlib import Path
 
 # Select basin/basins to run from list below
-basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes',
-'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
+# basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
+basin_ls = ['Red']
 # basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin','Rio_Grande']
 # basin_ls =  ['Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-year = '2012'
+year = '2010'
 
 # Specify output location
-main_directory = 'Spinti_river_fragmentation_data_2022/'
+main_directory = 'D:/Barrier_Fragmentation_US/Output/'
 results_folder = main_directory+'analyzed_data/nabd_analyzed/'+str(year)+'/'
 
 # %%
@@ -30,7 +30,7 @@ for basin in basin_ls:
                   usecols=['Hydroseq', 'UpHydroseq', 'DnHydroseq',
                             'LENGTHKM', 'StartFlag', 'DamCount',
                             'Coordinates', 'DamID',  'QC_MA', 'Norm_stor',
-                            'HUC2', 'HUC4', 'HUC8', 'StreamOrde'])
+                            'HUC8', 'StreamOrde'])
 
     segments.QC_MA = (segments.QC_MA * 365 * 24 * 3600 * 0.0283168)/(10**6) #QC_MA = Average flow in cfs 
     segments.Norm_stor = (segments.Norm_stor * 1233.48)/(10**6) #Norm_stor =  normal storage in acre feet
@@ -65,8 +65,10 @@ for basin in basin_ls:
     t2 = datetime.datetime.now()
     segments['DOR'] = segments.Norm_stor_up /  \
         segments.QC_MA 
-    segments.DOR[(segments['QC_MA'] == 0) & (segments['Norm_stor_up'] >0)] = -1
-    segments.DOR[segments['Norm_stor_up'] == 0] = 0
+    # segments.DOR[(segments['QC_MA'] == 0) & (segments['Norm_stor_up'] >0)] = -1
+    # segments.DOR[segments['Norm_stor_up'] == 0] = 0
+    segments.loc[(segments['QC_MA'] == 0) & (segments['Norm_stor_up'] > 0), 'DOR'] = -1
+    segments.loc[segments['Norm_stor_up'] == 0, 'DOR'] = 0
 
     t3 = datetime.datetime.now()
     print("Calculate DOR:", (t3-t2))
@@ -86,18 +88,27 @@ for basin in basin_ls:
     #__________________________________________________________
     
     # 5. Aggregate by HUC
-    HUC_vallist=['HUC2','HUC4','HUC8']
+    HUC_vallist=['HUC8']
 
     for HUC_val in HUC_vallist:
         HUC_summary = segments.pivot_table(values=['Norm_stor', 'DamCount', 'LENGTHKM'],
-                                      index=HUC_val, aggfunc={'Norm_stor': (np.sum, np.max),
-                                                                'DamCount': np.sum,
-                                                                'LENGTHKM': np.sum})
+                                      index=HUC_val, aggfunc={'Norm_stor': ("sum", "max"),
+                                                                'DamCount': "sum",
+                                                                'LENGTHKM': "sum"})
 
         HUC_summary.columns = ["_".join((i,j)) for i,j in HUC_summary.columns]
         HUC_summary.reset_index()
         HUC_summaryf = fragments.pivot_table(values=['LENGTHKM'],  index=HUC_val, 
-                                         aggfunc={'LENGTHKM': (np.mean, len, np.max)})
+                                         aggfunc={'LENGTHKM': ("mean", len, "max")})
+        # HUC_summary = segments.pivot_table(values=['Norm_stor', 'DamCount', 'LENGTHKM'],
+        #                               index=HUC_val, aggfunc={'Norm_stor': (np.sum, np.max),
+        #                                                         'DamCount': np.sum,
+        #                                                         'LENGTHKM': np.sum})
+
+        # HUC_summary.columns = ["_".join((i,j)) for i,j in HUC_summary.columns]
+        # HUC_summary.reset_index()
+        # HUC_summaryf = fragments.pivot_table(values=['LENGTHKM'],  index=HUC_val, 
+        #                                  aggfunc={'LENGTHKM': (np.mean, len, np.max)})
         HUC_summaryf.columns = ["_".join((i,j)) for i,j in HUC_summaryf.columns]
         HUC_summaryf.reset_index()
         HUC_summary = pd.concat([HUC_summary, HUC_summaryf], axis=1)
@@ -121,7 +132,7 @@ for basin in basin_ls:
     segmentsGeo.Coordinates = segmentsGeo.Coordinates.astype(str)
     segmentsGeo['Coordinates'] = segmentsGeo['Coordinates'].apply(wkt.loads)
     segmentsGeo = gp.GeoDataFrame(segmentsGeo, geometry='Coordinates')
-
+    segmentsGeo.crs = "EPSG:4269"
     segmentsGeo.to_file(basin + '_segGeo'+'_' + year + '.shp')
     #__________________________________________________________
 

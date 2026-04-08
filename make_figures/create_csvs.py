@@ -2,7 +2,7 @@
 import pandas as pd, numpy as np, geopandas as gp, os
 from pathlib import Path
             
-def combined_huc_csv(basin_ls, results_folder, huc):
+def combined_huc_csv(basin_ls, results_folder, huc, year):
     """Combines all the basins together into one csv by HUC.
 
         This function takes a list of basins and creates a combined csv. The 
@@ -33,7 +33,8 @@ def combined_huc_csv(basin_ls, results_folder, huc):
     os.chdir(results_folder)
 
     # Make list of names of files to be read in (by basin and HUC value)
-    extension = huc+'_indices.csv'
+    # extension = huc+'_indices.csv'
+    extension = huc + "_" + year + '_indices.csv'
     HUC_summary_list = [i+extension for i in basin_ls]
 
     # Combine all basin csvs together into a dataframe
@@ -74,7 +75,8 @@ def combined_segGeo_csv(basin_ls, results_folder, year):
     os.chdir(results_folder)
 
     # Make list of names of files to be read in (by basin and HUC value)
-    extension = '_segGeo.shp'
+    # extension = '_segGeo.shp'
+    extension = '_segGeo_' + year + '.shp'
     basin_summary_list = [i+extension for i in basin_ls]
 
     # Combine all basin csvs together into a dataframe
@@ -121,7 +123,8 @@ def combined_frag_csv(basin_ls, results_folder, year):
     os.chdir(results_folder)
 
     # Make list of names of files to be read in (by basin and HUC value)
-    extension = '_fragments.csv'
+    # extension = '_fragments.csv'
+    extension = '_fragments_' + year + '.csv'
     basin_summary_list = [i+extension for i in basin_ls]
 
     # Combine all basin csvs together into a dataframe

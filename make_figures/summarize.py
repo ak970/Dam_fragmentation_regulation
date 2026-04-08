@@ -3,28 +3,32 @@ import geopandas as gp, pandas as pd, numpy as np
 import create_csvs as crc, huc_merge as hm
 # %%
 #Specifying inputs
-basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes',
-'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-years = ['no_dams', '1920', '1950', '1980', '2010']
-main_directory = 'Spinti_river_fragmentation_data_2022/'
-results_folder = main_directory+'analyzed_data/'
+# basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes','Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
+basin_ls = ['Red']
+# years = ['no_dams', '1920', '1950', '1980', '2010']
+years = ['2010']
+# main_directory = 'Spinti_river_fragmentation_data_2022/'
+# results_folder = main_directory+'analyzed_data/'
+main_directory = 'D:/Barrier_Fragmentation_US/Output/'
+results_folder = main_directory+'analyzed_data/nabd_analyzed/'
+# results_folder = main_directory+'processed_data/'
 
 for year in years:
     results_folder2 = results_folder+year+'/'
     print("---------------"+year+"---------------")
 
     #HUC analysis
-    HUC_list=['HUC2','HUC4','HUC8']
+    HUC_list=['HUC8']
 
     ## Create combined csv
     for huc in HUC_list:
-        crc.combined_huc_csv(basin_ls, results_folder2, huc)
+        crc.combined_huc_csv(basin_ls, results_folder2, huc, year)
 
     ## Merge the combined csvs with HUC shapefiles
-    huc2 = hm.HUC2_indices_merge(results_folder2, year)  #HUC2
-    print("HUC 2 indices finished")
-    huc4 = hm.HUC4_indices_merge(results_folder2, year)  #HUC4
-    print("\n"+"HUC 4 indices finished")
+    # huc2 = hm.HUC2_indices_merge(results_folder2, year)  #HUC2
+    # print("HUC 2 indices finished")
+    # huc4 = hm.HUC4_indices_merge(results_folder2, year)  #HUC4
+    # print("\n"+"HUC 4 indices finished")
     huc8 = hm.HUC8_indices_merge(results_folder2, year)    #HUC8
     print("\n" +"HUC 8 indices finished")
 

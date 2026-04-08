@@ -1,5 +1,6 @@
 import numpy as np
 import datetime
+import pandas as pd
 
 def make_fragments(segments, exit_id=999000, verbose=False, subwatershed=True):
     """Create stream fragments from stream segments based on dam locations.
@@ -60,7 +61,8 @@ def make_fragments(segments, exit_id=999000, verbose=False, subwatershed=True):
 
     # Setup a column to note segments that are fragment ends
     segments['FragEnd'] = np.zeros(len(segments))
-    segments.FragEnd[segments['DamID']>0] = 2 #all segments with a dam are a fragment outlet
+    # segments.FragEnd[segments['DamID']>0] = 2 #all segments with a dam are a fragment outlet
+    segments.loc[segments['DamID'] > 0, 'FragEnd'] = 2 #all segments with a dam are a fragment outlet
 
     snum = 0  # Counter for the segment starting points -- just for print purposes
     while len(queue) > 0:
@@ -119,13 +121,15 @@ def make_fragments(segments, exit_id=999000, verbose=False, subwatershed=True):
 
             # If the downstream segment is in the index and it has not been processed yet
             if newstart in segments.index and segments.loc[newstart, 'Frag'] == 0:
-                queue = queue.append(segments.loc[newstart])
+                # queue = queue.append(segments.loc[newstart])
+                queue = pd.concat([queue, segments.loc[[newstart]]])
                 #if verbose == True:
                 #    print("Adding to Queue!", newstart)
 
             # If the downstream segment is in the index and is another dam
             if newstart in segments.index and segments.loc[newstart, 'DamID'] > 0:
-                queue = queue.append(segments.loc[newstart])
+                # queue = queue.append(segments.loc[newstart])
+                queue = pd.concat([queue, segments.loc[[newstart]]])
                 #if verbose == True:
                 #    print("Adding to Queue!", newstart)
 
@@ -165,11 +169,11 @@ def agg_by_frag(segments):
     """
     # Making a fragment dataframe and variables aggregated by fragment
     fragments0 = segments.pivot_table(values=['LENGTHKM', 'DamCount', 'Norm_stor'], 
-                                        index='Frag', aggfunc=sum)
+                                        index='Frag', aggfunc="sum")
 
     # Add in the fragment index
     fragments0 = fragments0.join(segments.pivot_table(values=['Frag_Index'], 
-                                    index='Frag', aggfunc=min))
+                                    index='Frag', aggfunc="min"))
 
     # Filter out just the segments that are fragment end points
     # Set the index of this subset to the fragment index so you can join it later
@@ -178,8 +182,8 @@ def agg_by_frag(segments):
     FragEnds = FragEnds.set_index('Frag')
 
     # Join in columns for the fragment outlets
-    fragments0 = fragments0.join(FragEnds[['Hydroseq', 'DnHydroseq', 'QC_MA', 'HUC2', 
-                                            'HUC4', 'HUC8', 'Norm_stor_up', 'DamCount_up',
+    fragments0 = fragments0.join(FragEnds[['Hydroseq', 'DnHydroseq', 'QC_MA', 
+                                            'HUC8', 'Norm_stor_up', 'DamCount_up',
                                             'LENGTHKM_up', 'DOR', 'FragEnd']])
 
     # Use the downstream segment for each fragment to get its
@@ -265,7 +269,8 @@ def map_up_frag(fragments):
                 #      DnFrag,  "nparent ", fragments.loc[DnFrag, 'nparent'],
                 #      fragments.loc[DnFrag, 'parent_count'])
 
-                queuef = queuef.append(fragments.loc[DnFrag])
+                # queuef = queuef.append(fragments.loc[DnFrag])
+                queuef = pd.concat([queuef, fragments.loc[[DnFrag]]])
 
         # Remove the current fragment from the queue
         queuef = queuef.drop(queuef.index[0])
@@ -341,7 +346,8 @@ def upstream_ag(data, downIDs, agg_value):
     # Make a dataframe with just the values of interest
     pick=agg_value.copy()
     pick.append(downIDs)
-    up_agg = data[pick]
+    # up_agg = data[pick]
+    up_agg = data[pick].copy()
     #up_agg = data[[downIDs, agg_value]]
 
     # Start off giving every variable its own ID
@@ -390,7 +396,8 @@ def upstream_ag(data, downIDs, agg_value):
             if up_agg.loc[DnTemp, 'parent_count'] ==  \
                     up_agg.loc[DnTemp, 'nparent']:
 
-                queuef = queuef.append(up_agg.loc[DnTemp])
+                # queuef = queuef.append(up_agg.loc[DnTemp])
+                queuef = pd.concat([queuef, up_agg.loc[[DnTemp]]])
 
         # Remove the current fragment from the queue
         queuef = queuef.drop(queuef.index[0])

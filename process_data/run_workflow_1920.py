@@ -10,9 +10,8 @@ from shapely import wkt
 from pathlib import Path
 
 # Select basin/basins to run from list below
-basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes',
-'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-# basin_ls = ['Red']
+# basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
+basin_ls = ['Red']
 # basin_ls =  ['Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
 year = '1920'
 

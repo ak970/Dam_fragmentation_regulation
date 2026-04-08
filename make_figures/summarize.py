@@ -6,7 +6,7 @@ import create_csvs as crc, huc_merge as hm
 # basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes','Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
 basin_ls = ['Red']
 # years = ['no_dams', '1920', '1950', '1980', '2010']
-years = ['2010']
+years = ['1990']
 # main_directory = 'Spinti_river_fragmentation_data_2022/'
 # results_folder = main_directory+'analyzed_data/'
 main_directory = 'D:/Barrier_Fragmentation_US/Output/'

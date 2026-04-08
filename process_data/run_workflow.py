@@ -14,7 +14,7 @@ from pathlib import Path
 basin_ls = ['Red']
 # basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin','Rio_Grande']
 # basin_ls =  ['Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-year = '2010'
+year = '1990'
 
 # Specify output location
 main_directory = 'D:/Barrier_Fragmentation_US/Output/'

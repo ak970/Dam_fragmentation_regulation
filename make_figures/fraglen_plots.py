@@ -6,7 +6,9 @@ from matplotlib.pyplot import cm
 sns.set_style("ticks", {"axes.facecolor": ".8"})
 
 # Specify input locations
-main_directory = 'Spinti_river_fragmentation_data_2022/'
+# main_directory = 'Spinti_river_fragmentation_data_2022/'
+main_directory = 'D:/Barrier_Fragmentation_US/Output/'
+
 data_folder = main_directory+'processed_data/'
 results_folder = main_directory+'analyzed_data/'
 plot_folder = main_directory+'analyzed_data/len_analysis/'

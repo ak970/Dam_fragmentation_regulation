@@ -10,6 +10,59 @@ main_directory = 'D:/Barrier_Fragmentation_US/Output/'
 data_folder = main_directory+'analyzed_data/nabd_analyzed/'
 results_folder = main_directory+'analyzed_data/'
 
+
+
+########################  NEW CODE FOR SINGLE YEAR ##########################
+
+
+#Inputs to plots
+basin_ls = ['Red']
+basin_abr = ["RE"]
+c_all_dams = ['#f46d43'] # Just assigning one color for the Red basin
+
+# Plotting - Just 2 standard subplots instead of 4 broken ones
+fig, axs = plt.subplots(2, 1, sharex=True, figsize=(15, 15))
+fig.subplots_adjust(hspace=0.1)
+
+for count, basin in enumerate(basin_ls):
+    all_dams = gp.read_file(data_folder+"2010/"+basin+"_segGeo.shp")
+    all_dams = all_dams[all_dams["DamID"]!=0]
+
+    # 1. Total # of dams plot
+    axs[0].bar(basin, len(all_dams), label=basin, color=c_all_dams[count])
+    axs[0].set_ylabel("Total number of dams", size=24, weight='bold')
+    axs[0].tick_params(axis='both', which='major', labelsize=20)
+
+    # 2. Total storage plot
+    axs[1].bar(basin, sum(all_dams.Norm_stor), color=c_all_dams[count])
+    axs[1].set_ylabel("Total storage (MCM)", size=24, weight='bold')
+    axs[1].set_xlabel("Basin", size=24, weight='bold')
+    axs[1].tick_params(axis='both', which='major', labelsize=20)
+    
+    axs[1].set_xticks(range(len(basin_abr)))
+    axs[1].set_xticklabels(basin_abr)
+
+plt.tight_layout()
+# plt.savefig(results_folder+"bar_plots/together.png", bbox_inches='tight')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###########################  OLD CODE  ##################################
+
+
+
 #Inputs to plots
 # basin_ls = ['Great_Basin', 'Colorado', 'Rio_Grande', 'California', 'Gulf_Coast', 'Red', 'Mississippi', 'Columbia', 'South_Atlantic', 'Great_Lakes', 'North_Atlantic']
 basin_ls = ['Red']

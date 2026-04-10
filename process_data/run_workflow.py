@@ -1,143 +1,78 @@
-"""
-This script runs the river fragmentation and regulation data processing workflow.
+# process_data/run_workflow.py
+import geopandas as gp
+import pandas as pd
+import numpy as np
+import os
+import process_data.read as rd
+import process_data.bifurcate as bfc
+import datetime
 
-Created by: Laura Condon and Rachel Spinti
-"""
-# %%
-import pandas as pd, numpy as np, geopandas as gp, bifurcate as bfc, create_basin_csvs as cbc
-import datetime, sys
-from shapely import wkt
-from pathlib import Path
+main_directory = 'D:/Peninsular India/Dam_fragmentation/'
 
-# Select basin/basins to run from list below
-# basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-basin_ls = ['Red']
-# basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin','Rio_Grande']
-# basin_ls =  ['Great_Lakes', 'Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-year = '1990'
+# Loop through the decadal timescale
+years =['no_dams', '1980', '1990', '2000', '2010', '2020']
+basin_ls =['godavari', 'krishna', 'cauvery', 'subernarekha', 'brahmani_baitarni', 
+            'mahanadi', 'pennar', 'mahi', 'sabarmati', 'narmada', 'tapi', 
+            'wfr_tapi_tadri', 'wfr_tadri_kanyakumari', 'efr_mahanadi_pennar', 'efr_pennar_kanyakumari']
 
-# Specify output location
-main_directory = 'D:/Barrier_Fragmentation_US/Output/'
-results_folder = main_directory+'analyzed_data/nabd_analyzed/'+str(year)+'/'
+for year in years:
+    results_folder = main_directory + 'Output/analyzed_data/' + str(year) + '/'
+    os.makedirs(results_folder, exist_ok=True)
 
-# %%
-cbc.create_basin_csvs(basin_ls, main_directory, results_folder, year)
-
-t_start = datetime.datetime.now()
-for basin in basin_ls:
-    # 1. Read  in the segment information for the basin
-    segments = pd.read_csv(results_folder + basin + ".csv", index_col='Hydroseq',
-                  usecols=['Hydroseq', 'UpHydroseq', 'DnHydroseq',
-                            'LENGTHKM', 'StartFlag', 'DamCount',
-                            'Coordinates', 'DamID',  'QC_MA', 'Norm_stor',
-                            'HUC8', 'StreamOrde'])
-
-    segments.QC_MA = (segments.QC_MA * 365 * 24 * 3600 * 0.0283168)/(10**6) #QC_MA = Average flow in cfs 
-    segments.Norm_stor = (segments.Norm_stor * 1233.48)/(10**6) #Norm_stor =  normal storage in acre feet
-    segments["line_width"] = segments["StreamOrde"]/10  #for graphing high Stream Orders thicker than low orders
-    segments["new_width2"] = 'nan'  #for graphing DOR, so high Stream Orders are even thicker
-    for i in segments.index:
-        if segments.loc[i, 'line_width'] < 0.5:
-            segments.loc[i, 'new_width2']=segments.loc[i, 'line_width']/2
-        else:
-            segments.loc[i, 'new_width2']=segments.loc[i, 'line_width']
-
-    #__________________________________________________________
-
-    # 2. Aggregate segment values by upstream area
-    t0 = datetime.datetime.now()
-    agg_list = ['Norm_stor', 'DamCount', 'LENGTHKM', 'QC_MA']
-    segments_up = bfc.upstream_ag(data=segments, downIDs='DnHydroseq', 
-                                agg_value=agg_list)
-    
-    t1 = datetime.datetime.now()
-    print("---- "+basin+" Output"+" ----"+" \n")
-    print("Aggregate by Upstream segments:", (t1-t0))
-
-    # Add the resulting upstream aggregates back into segments DF with the upstream_count
-    uplist=[i+'_up' for i in agg_list]
-    segments[uplist]=segments_up[uplist]
-    segments["upstream_count"] = segments_up["upstream_count"]
-
-    #__________________________________________________________
-    
-    # 3.  Calculate Degree of Regulation 
-    t2 = datetime.datetime.now()
-    segments['DOR'] = segments.Norm_stor_up /  \
-        segments.QC_MA 
-    # segments.DOR[(segments['QC_MA'] == 0) & (segments['Norm_stor_up'] >0)] = -1
-    # segments.DOR[segments['Norm_stor_up'] == 0] = 0
-    segments.loc[(segments['QC_MA'] == 0) & (segments['Norm_stor_up'] > 0), 'DOR'] = -1
-    segments.loc[segments['Norm_stor_up'] == 0, 'DOR'] = 0
-
-    t3 = datetime.datetime.now()
-    print("Calculate DOR:", (t3-t2))
-
-    #__________________________________________________________
-
-    # 4. Divide into fragments and get average fragment properties
-    t4 = datetime.datetime.now()
-    segments = bfc.make_fragments(
-        segments, exit_id=52000, verbose=False, subwatershed=True)
-    t5 = datetime.datetime.now()
-    print("Make Fragments:", (t5-t4))
-
-    fragments = bfc.agg_by_frag(segments)
-    fragments.to_csv(results_folder+basin+'_fragments'+'_' + year + '.csv')
-
-    #__________________________________________________________
-    
-    # 5. Aggregate by HUC
-    HUC_vallist=['HUC8']
-
-    for HUC_val in HUC_vallist:
-        HUC_summary = segments.pivot_table(values=['Norm_stor', 'DamCount', 'LENGTHKM'],
-                                      index=HUC_val, aggfunc={'Norm_stor': ("sum", "max"),
-                                                                'DamCount': "sum",
-                                                                'LENGTHKM': "sum"})
-
-        HUC_summary.columns = ["_".join((i,j)) for i,j in HUC_summary.columns]
-        HUC_summary.reset_index()
-        HUC_summaryf = fragments.pivot_table(values=['LENGTHKM'],  index=HUC_val, 
-                                         aggfunc={'LENGTHKM': ("mean", len, "max")})
-        # HUC_summary = segments.pivot_table(values=['Norm_stor', 'DamCount', 'LENGTHKM'],
-        #                               index=HUC_val, aggfunc={'Norm_stor': (np.sum, np.max),
-        #                                                         'DamCount': np.sum,
-        #                                                         'LENGTHKM': np.sum})
-
-        # HUC_summary.columns = ["_".join((i,j)) for i,j in HUC_summary.columns]
-        # HUC_summary.reset_index()
-        # HUC_summaryf = fragments.pivot_table(values=['LENGTHKM'],  index=HUC_val, 
-        #                                  aggfunc={'LENGTHKM': (np.mean, len, np.max)})
-        HUC_summaryf.columns = ["_".join((i,j)) for i,j in HUC_summaryf.columns]
-        HUC_summaryf.reset_index()
-        HUC_summary = pd.concat([HUC_summary, HUC_summaryf], axis=1)
-
-        seg_group = segments.groupby(HUC_val)
-        seg_outlet = seg_group.LENGTHKM_up.idxmax() 
-        HUC_summary['seg_outlet'] = seg_group.LENGTHKM_up.idxmax() #segment 'outlet'
-        column_list = ['Frag', 'LENGTHKM_up', 'DOR', 'Norm_stor_up', 'QC_MA']
-        outlet_vals = segments.loc[HUC_summary.seg_outlet, column_list]
-        HUC_summary = HUC_summary.join(outlet_vals, on='seg_outlet', rsuffix='_outlet')
-        add_suffix = [(i, i+'_outlet') for i in column_list]
-        HUC_summary.rename(columns = dict(add_suffix), inplace=True)
+    for basin in basin_ls:
+        print(f"----- Starting {basin} ({year}) -----")
         
-        HUC_summary.to_csv(results_folder + basin + HUC_val+ "_" + year+'_indices.csv')
-        print('Finished writing huc '+HUC_val+' indices to csv')
+        # Read filtered data
+        nabd_dams, flowlines = rd.read_lines(main_directory, basin, year)
+        
+        # Ensure units are metric MCM/year
+        # DIS_AV_CMS is converted from seconds to years, divided by 10^6 to reach MCM
+        flowlines['DIS_AV_CMS'] = (flowlines['DIS_AV_CMS'] * 365 * 24 * 3600) / (10**6)
+        
+        # Aggregate dams in case multiple dams sit on the exact same REACH_ID
+        nabd_dams['Cap_mcm'] = nabd_dams['Cap_mcm'].fillna(0)
+        dams_agg = nabd_dams.groupby('REACH_ID').agg({'Cap_mcm': 'sum', 'GDW_ID': 'count'}).reset_index()
+        dams_agg.rename(columns={'GDW_ID': 'DamCount'}, inplace=True)
+        dams_agg['DamID'] = range(1, len(dams_agg)+1) # Internal Fragment Breaker ID
+        
+        # Merge dams onto rivers
+        segments = flowlines.merge(dams_agg, on='REACH_ID', how='left')
+        segments['DamCount'] = segments['DamCount'].fillna(0)
+        segments['Cap_mcm'] = segments['Cap_mcm'].fillna(0)
+        segments['DamID'] = segments['DamID'].fillna(0)
 
-    #__________________________________________________________
+        # 1. Aggregate Upstream attributes (Cap_mcm and DamCount) using NOID mapping
+        segments_up = bfc.upstream_ag(data=segments, downIDs='NDOID', upIDs='NUOID', basin=basin, attr=['Cap_mcm', 'DamCount'])
+        segments = segments.merge(segments_up, left_on='NOID', right_index=True, how='left')
 
-    # 6. Make Segments into a geo dataframe for plotting
-    segmentsGeo = segments.copy()
-    segmentsGeo.Coordinates = segmentsGeo.Coordinates.astype(str)
-    segmentsGeo['Coordinates'] = segmentsGeo['Coordinates'].apply(wkt.loads)
-    segmentsGeo = gp.GeoDataFrame(segmentsGeo, geometry='Coordinates')
-    segmentsGeo.crs = "EPSG:4269"
-    segmentsGeo.to_file(basin + '_segGeo'+'_' + year + '.shp')
-    #__________________________________________________________
+        # 2. Calculate DOR (Degree of Regulation) safely
+        segments['DOR'] = 0.0
+        segments.loc[(segments['DIS_AV_CMS'] == 0) & (segments['Cap_mcm_up'] > 0), 'DOR'] = -1
+        segments.loc[segments['DIS_AV_CMS'] > 0, 'DOR'] = segments['Cap_mcm_up'] / segments['DIS_AV_CMS']
 
+        # 3. Create Fragments
+        segments['FragEnd'] = 0
+        segments.loc[segments['DamID'] > 0, 'FragEnd'] = 2 # Dam is a fragment outlet
+        segments.loc[segments['NDOID'] == 0, 'FragEnd'] = 1 # Ocean/Terminal is an outlet
+        
+        fragments = bfc.make_fragments(segments, downIDs='NDOID', upIDs='NUOID', basin=basin)
+        segments = segments.merge(fragments, left_on='NOID', right_index=True, how='left')
 
-t_end = datetime.datetime.now()
-print('Time to run all basins = ', t_end-t_start)
+        # 4. Summarize and group by HYBAS_ID
+        HUC_vallist = ['HYBAS_ID']
+        for HUC_val in HUC_vallist:
+            HUC_summary = segments.pivot_table(values=['Cap_mcm', 'DamCount', 'LENGTHKM'], index=HUC_val, aggfunc="sum")
+            HUC_summaryf = fragments.pivot_table(values=['LENGTHKM'], index=HUC_val, aggfunc="mean")
+            
+            HUC_summary = HUC_summary.join(HUC_summaryf, rsuffix='_mean')
+            HUC_summary.to_csv(results_folder + basin + '_' + HUC_val + '_indices.csv')
 
-# %%
+        # 5. Save basin-specific segments and fragments
+        segmentsGeo = gp.GeoDataFrame(segments, geometry='geometry')
+        segmentsGeo.crs = "EPSG:4326" # Standard for HydroATLAS
+        segmentsGeo.to_file(results_folder + basin + '_segGeo_' + year + '.shp')
+        
+        fragments_df = pd.DataFrame(fragments.drop(columns=['geometry'], errors='ignore'))
+        fragments_df.to_csv(results_folder + basin + '_fragments_' + year + '.csv')
+
+print("All runs complete!")

@@ -16,8 +16,8 @@ basin_ls = ['Red']
 year = '1920'
 
 # Specify output location
-main_directory = 'Spinti_river_fragmentation_data_2022/'
-results_folder = main_directory+'analyzed_data/nabd_analyzed'+str(year)+'/'
+main_directory = 'D:/Peninsular India/Dam_fragmentation/Output/'
+results_folder = main_directory+'analyzed_data/'+str(year)+'/'
 
 # %%
 crc.create_basin_csvs(basin_ls, main_directory, results_folder, year)

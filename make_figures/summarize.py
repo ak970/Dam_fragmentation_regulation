@@ -1,41 +1,26 @@
-# %%
-import geopandas as gp, pandas as pd, numpy as np
-import create_csvs as crc, huc_merge as hm
-# %%
-#Specifying inputs
-# basin_ls = ['California', 'Colorado', 'Columbia', 'Great_Basin', 'Great_Lakes','Gulf_Coast','Mississippi', 'North_Atlantic', 'Red', 'Rio_Grande','South_Atlantic']
-basin_ls = ['Red']
-# years = ['no_dams', '1920', '1950', '1980', '2010']
-years = ['1990']
-# main_directory = 'Spinti_river_fragmentation_data_2022/'
-# results_folder = main_directory+'analyzed_data/'
-main_directory = 'D:/Barrier_Fragmentation_US/Output/'
-results_folder = main_directory+'analyzed_data/nabd_analyzed/'
-# results_folder = main_directory+'processed_data/'
+# make_figures/summarize.py
+import make_figures.create_csvs as crc
+import make_figures.huc_merge as hm
+import os
+
+main_directory = 'D:/Peninsular India/Dam_fragmentation/'
+
+years =['no_dams', '1980', '1990', '2000', '2010', '2020']
+basin_ls =['godavari', 'krishna', 'cauvery', 'subernarekha', 'brahmani_baitarni', 
+            'mahanadi', 'pennar', 'mahi', 'sabarmati', 'narmada', 'tapi', 
+            'wfr_tapi_tadri', 'wfr_tadri_kanyakumari', 'efr_mahanadi_pennar', 'efr_pennar_kanyakumari']
 
 for year in years:
-    results_folder2 = results_folder+year+'/'
-    print("---------------"+year+"---------------")
+    print(f"\n---------------{year}---------------")
+    results_folder2 = main_directory + 'Output/analyzed_data/' + str(year) + '/'
 
-    #HUC analysis
-    HUC_list=['HUC8']
-
-    ## Create combined csv
-    for huc in HUC_list:
-        crc.combined_huc_csv(basin_ls, results_folder2, huc, year)
-
-    ## Merge the combined csvs with HUC shapefiles
-    # huc2 = hm.HUC2_indices_merge(results_folder2, year)  #HUC2
-    # print("HUC 2 indices finished")
-    # huc4 = hm.HUC4_indices_merge(results_folder2, year)  #HUC4
-    # print("\n"+"HUC 4 indices finished")
-    huc8 = hm.HUC8_indices_merge(results_folder2, year)    #HUC8
-    print("\n" +"HUC 8 indices finished")
-
-    #Create combined basin files
+    # 1. Combine Basin outputs
+    crc.combined_huc_csv(basin_ls, results_folder2, year)
     crc.combined_segGeo_csv(basin_ls, results_folder2, year)
     crc.combined_frag_csv(basin_ls, results_folder2, year)
-    print("\n" +"Create combined csvs finished")
 
-print("\n"+"** Summarize by HUC and all_basins complete **")
-# %%
+    # 2. Merge with Catchment Shapefile
+    # (Assuming you put hybasin.shp inside a folder named 'hucs')
+    hybas = hm.HYBAS_indices_merge(results_folder2, year, main_directory)
+
+print("\n** Summarize by HYBAS_ID and all_basins complete **")

@@ -1,7 +1,7 @@
 # process_data/read.py
 import geopandas as gp
 import pandas as pd
-import process_data.extract as ex
+import extract as ex
 
 def read_lines(main_directory, basin, year):
     # 1. Load Dam Data
@@ -12,11 +12,11 @@ def read_lines(main_directory, basin, year):
     if year != 'no_dams':
         if year == '2020': 
             # Modern Day: Include all valid dams <= 2020 PLUS the unknown (-99) dams
-            dams = dams[(dams['Year_dam'] <= int(year)) | (dams['Year_dam'] == -99)]
+            dams = dams[(dams['Final_Year'] <= int(year)) | (dams['Final_Year'] == -99)]
         else:
             # Historical Years: Only include dams with a KNOWN year <= target year. 
-            # The (dams['Year_dam'] > 0) strictly removes the -99 values!
-            dams = dams[(dams['Year_dam'] <= int(year)) & (dams['Year_dam'] > 0)]
+            # The (dams['Final_Year'] > 0) strictly removes the -99 values!
+            dams = dams[(dams['Final_Year'] <= int(year)) & (dams['Final_Year'] > 0)]
     else:
         dams = dams.iloc[0:0] # Creates an empty dataframe if 'no_dams'
         
@@ -25,7 +25,7 @@ def read_lines(main_directory, basin, year):
         dams = dams.rename(columns={'HYRIV_ID': 'REACH_ID'})
 
     # 2. Load River Flowlines
-    flowlines = gp.read_file(main_directory + 'flowline_data/FFR_peninsular_updated2.shp')
+    flowlines = gp.read_file(main_directory + 'flowline_data/river_peninsular.shp')
     
     # Filter to current basin using the extract.py dictionary
     basin_codes = ex.major_basins[basin]

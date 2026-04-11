@@ -5,7 +5,7 @@ import geopandas as gp
 def HYBAS_indices_merge(results_folder, year, main_directory):
     # Load data
     summary_df = pd.read_csv(results_folder + 'HYBAS_summary_' + year + '.csv')
-    catchment = gp.read_file(main_directory + "hucs/hybasin.shp")
+    catchment = gp.read_file(main_directory + "basin_data/hybasin.shp")
     
     # Keep only available geometry columns
     catchment = catchment.loc[:, ~catchment.columns.duplicated()]
@@ -17,6 +17,9 @@ def HYBAS_indices_merge(results_folder, year, main_directory):
 
     # Merge
     catchment = catchment.merge(summary_df, on='HYBAS_ID_str', how='left')
+    
+    # 🌟 ADD THIS LINE: Calculate Fragmentation Density (Dams per Sq Km)
+    catchment['Frag_Dens'] = catchment['DamCount'] / catchment['SUB_AREA']
     
     # Drop redundant tracking columns
     catchment = catchment.drop(columns=['HYBAS_ID_str', 'HYBAS_ID_y'])

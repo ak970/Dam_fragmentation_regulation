@@ -1,6 +1,6 @@
 # make_figures/summarize.py
-import make_figures.create_csvs as crc
-import make_figures.huc_merge as hm
+import create_csvs as crc
+import huc_merge as hm
 import os
 
 main_directory = 'D:/Peninsular India/Dam_fragmentation/'

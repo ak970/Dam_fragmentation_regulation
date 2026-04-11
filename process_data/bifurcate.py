@@ -1,62 +1,69 @@
 # process_data/bifurcate.py
-import numpy as np
 import pandas as pd
 
 def upstream_ag(data, downIDs, upIDs, basin, attr):
-    data = data.set_index(downIDs, drop=False)
-    up_agg = data[[upIDs] + attr].copy()
+    # Ensure we are working with a clean copy
+    df = data.copy()
     
-    # Initialize counts
-    up_agg['upstream_count'] = np.ones(len(up_agg))
+    # Initialize the upstream storage tracking columns
     for a in attr:
-        up_agg[a+'_up'] = up_agg[a]
+        df[a+'_up'] = df[a].fillna(0)
+    df['upstream_count'] = 1
+    
+    # Calculate "in-degrees" (How many rivers flow INTO a specific segment)
+    in_degree = df.groupby(downIDs).size().to_dict()
+    
+    # Initialize Queue with "Headwaters" (Segments that have NO rivers flowing into them)
+    queue =[nid for nid in df.index if nid not in in_degree]
+    
+    # Top-Down Graph Traversal (From headwaters to the ocean)
+    while queue:
+        curr = queue.pop(0)
+        dn = df.at[curr, downIDs]
         
-    queuef = pd.DataFrame()
-    queue = pd.DataFrame([data.loc[data[downIDs][~data[downIDs].isin(data[upIDs])]]])
-    queue = pd.concat([pd.DataFrame(), data.loc[~data[downIDs].isin(data[upIDs])]])
-
-    while len(queue) > 0:
-        DnTemp = queue.iloc[0][downIDs]
-        UpTemp = queue.iloc[0][upIDs]
-        
-        if UpTemp in up_agg.index:
-            up_agg.loc[UpTemp, 'upstream_count'] += up_agg.loc[DnTemp, 'upstream_count']
+        # If the downstream segment exists in our map, push the water/dams downstream!
+        if dn in df.index and dn != 0:
             for a in attr:
-                up_agg.loc[UpTemp, a+'_up'] += up_agg.loc[DnTemp, a+'_up']
-                
-            queue = pd.concat([queue, data.loc[[UpTemp]]]).drop_duplicates(subset=[downIDs])
+                df.at[dn, a+'_up'] += df.at[curr, a+'_up']
+            df.at[dn, 'upstream_count'] += df.at[curr, 'upstream_count']
             
-        queuef = pd.concat([queuef, up_agg.loc[[DnTemp]]])
-        queue = queue.iloc[1:]
-
-    return queuef[[a+'_up' for a in attr] + ['upstream_count']]
+            # Decrement the dependency tracker
+            in_degree[dn] -= 1
+            if in_degree[dn] == 0:
+                queue.append(dn)
+                
+    return df[[a+'_up' for a in attr] + ['upstream_count']]
 
 
 def make_fragments(segments, downIDs, upIDs, basin):
-    FragEnds = segments.loc[segments['FragEnd'] > 0].copy()
-    FragEnds['NOID'] = FragEnds.index
-    fragments = pd.DataFrame()
-
-    queue = pd.DataFrame(segments.loc[segments['FragEnd'] == 1])
-    queue['Frag_Index'] = range(1, len(queue) + 1)
-    fragments = queue.copy()
-
-    while len(queue) > 0:
-        UpTemp = queue.iloc[0][upIDs]
-        Frag_Index = queue.iloc[0]['Frag_Index']
+    frag_dict = {}
+    queue =[]
+    
+    # 1. Identify all Fragment Outlets (Dams and Ocean/Terminal nodes)
+    frag_ends = segments[segments['FragEnd'] > 0]
+    
+    # Give every outlet its own unique Fragment Index
+    for i, (noid, _) in enumerate(frag_ends.iterrows(), start=1):
+        frag_dict[noid] = i
+        queue.append(noid)
         
-        if UpTemp in segments.index:
-            temp_row = segments.loc[[UpTemp]].copy()
-            if temp_row.iloc[0]['FragEnd'] > 0:
-                temp_row['Frag_Index'] = FragEnds.index.get_loc(UpTemp) + len(queue) + 1
-            else:
-                temp_row['Frag_Index'] = Frag_Index
-                
-            fragments = pd.concat([fragments, temp_row])
-            queue = pd.concat([queue, temp_row])
-            
-        queue = queue.iloc[1:]
+    # Pre-group the upstream segments for instant dictionary lookup
+    upstream_map = segments.groupby(downIDs).groups
+    
+    # 2. Bottom-Up Traversal (Walk upstream from every dam and paint the river branches)
+    while queue:
+        curr = queue.pop(0)
+        curr_frag = frag_dict[curr]
         
-    # Aggregate fragment attributes
-    fragments0 = fragments.groupby('Frag_Index').agg({'LENGTHKM': 'sum', 'DamCount': 'sum', 'Cap_mcm': 'sum'})
-    return fragments0
+        if curr in upstream_map:
+            for up in upstream_map[curr]:
+                # If the upstream segment doesn't have an ID yet, inherit this one!
+                if up not in frag_dict:
+                    frag_dict[up] = curr_frag
+                    queue.append(up)
+                    
+    # Format the clean dictionary back into a Pandas DataFrame
+    out_df = pd.DataFrame.from_dict(frag_dict, orient='index', columns=['Frag_Index'])
+    out_df.index.name = segments.index.name
+    
+    return out_df

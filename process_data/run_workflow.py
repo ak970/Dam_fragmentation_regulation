@@ -22,7 +22,7 @@ for year in years:
         nabd_dams, flowlines = rd.read_lines(main_directory, basin, year)
         
         # Unit Conversions
-        flowlines['DIS_AV_CMS'] = (flowlines['DIS_AV_CMS'] * 365 * 24 * 3600) / (10**6)
+        flowlines['DIS_AV_CMS'] = (flowlines['DIS_AV_CMS'] * 365 * 24 * 3600) / (10**6)  # 
         
         # Aggregate dams
         nabd_dams['CAP_MCM'] = nabd_dams['CAP_MCM'].fillna(0)
